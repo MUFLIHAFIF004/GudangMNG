@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:tb_gudangmng/services/auth_service.dart'; // Pastikan path import ini benar
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tb_gudangmng/services/auth_service.dart'; 
 import 'register_screen.dart';
 import 'home_screen.dart';
 
@@ -13,7 +14,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  // ganti nama variabel controller agar lebih relevan, tapi fungsinya tetap sama
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
@@ -23,20 +23,31 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Kirim text input (bisa email atau username) ke auth service
+      // Memanggil fungsi login dengan identifier (email/username)
       final user = await _authService.login(
-        _identifierController.text
-            .trim(), // Trim untuk menghapus spasi tidak sengaja
+        _identifierController.text.trim(),
         _passwordController.text,
       );
 
       setState(() => _isLoading = false);
 
       if (user != null) {
+        final prefs = await SharedPreferences.getInstance();
+        // Simpan semua data yang diperlukan termasuk ID
+        await prefs.setInt('id', user.id);
+        await prefs.setString('token', user.token ?? '');
+        await prefs.setString('nama', user.nama);
+        await prefs.setString('username', user.username);
+        await prefs.setString('email', user.email);
+        await prefs.setString('telepon', user.telepon);
+        await prefs.setString('id_karyawan', user.idKaryawan); 
+        await prefs.setBool('is_login', true);
+
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Login Berhasil!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Selamat Datang, ${user.nama}!'), backgroundColor: Colors.green),
+        );
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -63,40 +74,19 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo/Icon Merah
+              // Logo Warehouse
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.withOpacity(0.2),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4))],
                 ),
-                child: Icon(
-                  Icons.warehouse_rounded,
-                  size: 64,
-                  color: Colors.red[800],
-                ),
+                child: Icon(Icons.warehouse_rounded, size: 64, color: Colors.red[800]),
               ),
               const SizedBox(height: 24),
-              Text(
-                'Selamat Datang',
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red[900],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Silahkan masuk untuk melanjutkan',
-                style: GoogleFonts.poppins(color: Colors.red[300]),
-              ),
+              Text('Selamat Datang', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.red[900])),
+              Text('Silahkan masuk untuk melanjutkan', style: GoogleFonts.poppins(color: Colors.red[300])),
               const SizedBox(height: 40),
 
               // Card Form
@@ -105,48 +95,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))],
                 ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // INPUT EMAIL ATAU USERNAME
+                      // INPUT EMAIL / USERNAME
                       TextFormField(
                         controller: _identifierController,
                         decoration: const InputDecoration(
-                          labelText: 'Email / Username', // Label diperbarui
+                          labelText: 'Email / Username',
                           prefixIcon: Icon(Icons.person),
                         ),
-                        // VALIDASI GANDA (EMAIL ATAU USERNAME)
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Email atau Username wajib diisi';
+                          if (value == null || value.isEmpty) return 'Email atau Username wajib diisi';
+                          
+                          // Deteksi apakah input berupa email atau username sederhana
+                          bool isEmail = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value);
+                          bool isUsername = RegExp(r'^[a-zA-Z0-9_]{3,}$').hasMatch(value);
+
+                          if (!isEmail && !isUsername) {
+                            return 'Format Email atau Username tidak valid';
                           }
-
-                          // 1. Cek Regex Email
-                          // Format: text@text.domain
-                          final emailRegex = RegExp(
-                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                          );
-
-                          // 2. Cek Regex Username
-                          // Format: Huruf, angka, titik, underscore, min 3 karakter, TANPA @
-                          final usernameRegex = RegExp(r'^[a-zA-Z0-9._]{3,}$');
-
-                          // Logic: Jika TIDAK cocok email DAN TIDAK cocok username, maka Error
-                          if (!emailRegex.hasMatch(value) &&
-                              !usernameRegex.hasMatch(value)) {
-                            return 'Masukkan format Email atau Username yang benar';
-                          }
-
-                          return null; // Valid
+                          return null;
                         },
                       ),
                       const SizedBox(height: 20),
@@ -159,9 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: 'Password',
                           prefixIcon: Icon(Icons.lock),
                         ),
-                        validator: (value) => value!.length < 6
-                            ? 'Password minimal 6 karakter'
-                            : null,
+                        validator: (value) => value!.length < 6 ? 'Password minimal 6 karakter' : null,
                       ),
                       const SizedBox(height: 30),
 
@@ -173,23 +143,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red[800],
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           child: _isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
-                              : Text(
-                                  'MASUK',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
-                                ),
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : Text('MASUK', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
                         ),
                       ),
                     ],
@@ -197,28 +155,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Tambahan Navigasi ke Register (Optional jika ingin ditampilkan)
               TextButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RegisterScreen(),
-                    ),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
                 },
                 child: RichText(
                   text: TextSpan(
                     text: 'Belum punya akun? ',
                     style: TextStyle(color: Colors.red[300]),
                     children: [
-                      TextSpan(
-                        text: 'Daftar Sekarang',
-                        style: TextStyle(
-                          color: Colors.red[800],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      TextSpan(text: 'Daftar Sekarang', style: TextStyle(color: Colors.red[800], fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),

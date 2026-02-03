@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:tb_gudangmng/screen/home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screen/login_screen.dart';
 import 'screen/home_screen.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final prefs = await SharedPreferences.getInstance();
+  final bool isLogin = prefs.getBool('is_login') ?? false;
+
+  runApp(MyApp(isLogin: isLogin));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLogin;
+  const MyApp({super.key, required this.isLogin});
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +49,8 @@ class MyApp extends StatelessWidget {
           prefixIconColor: Colors.red[800],
         ),
       ),
-      home: const LoginScreen(),
+      // LOGIKA PINDAH HALAMAN OTOMATIS:
+      home: isLogin ? const HomeScreen() : const LoginScreen(),
     );
   }
 }
