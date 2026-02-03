@@ -108,7 +108,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // Gunakan imageQuality (1-100) untuk mempercepat upload & mengurangi beban memori
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 35, // Kompresi hingga 35% agar Base64 tidak terlalu panjang
+      imageQuality: 30, // Kompresi hingga 35% agar Base64 tidak terlalu panjang
       maxWidth: 500,    // Batasi lebar gambar agar tidak terlalu besar di DB
     );
     

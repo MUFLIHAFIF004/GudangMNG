@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart'; 
 import '../services/barang_service.dart';
 import '../model/barang_model.dart';
 import 'input_barang_screen.dart';
@@ -45,17 +46,27 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
       if (status == 'SEMUA') {
         _filteredBarang = _allBarang;
       } else {
-        _filteredBarang =
-            _allBarang.where((b) => b.status.toUpperCase() == status).toList();
+        _filteredBarang = _allBarang
+            .where((b) => b.status.toUpperCase() == status)
+            .toList();
       }
     });
   }
 
+  // --- LOGIKA EDIT YANG DIPERBAIKI ---
   void _handleEdit(BarangModel barang) async {
+    // Tentukan mode berdasarkan status barang yang dipilih
+    // Jika statusnya 'MASUK', buka form mode Masuk.
+    // Jika 'KELUAR', buka form mode Keluar.
+    bool isStatusMasuk = barang.status.toUpperCase() == 'MASUK';
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => InputBarangScreen(isMasuk: true, barang: barang),
+        builder: (context) => InputBarangScreen(
+          isMasuk: isStatusMasuk, // Kirim status yang benar
+          barang: barang,
+        ),
       ),
     );
     if (result == true) _fetchData();
@@ -99,8 +110,7 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
                 );
               }
             },
-            child:
-                Text("Hapus", style: GoogleFonts.poppins(color: Colors.white)),
+            child: Text("Hapus", style: GoogleFonts.poppins(color: Colors.white)),
           ),
         ],
       ),
@@ -109,14 +119,10 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // === LOGIKA PERHITUNGAN STOK TERPISAH ===
-    
-    // 1. Hitung stok hanya untuk barang yang berstatus MASUK
     int totalStokMasuk = _allBarang
         .where((b) => b.status.toUpperCase() == 'MASUK')
         .fold(0, (sum, item) => sum + item.stok);
 
-    // 2. Hitung stok hanya untuk barang yang berstatus KELUAR
     int totalStokKeluar = _allBarang
         .where((b) => b.status.toUpperCase() == 'KELUAR')
         .fold(0, (sum, item) => sum + item.stok);
@@ -134,13 +140,10 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
         child: Column(
           children: [
             _buildFilterSection(),
-            
-            // === HEADER INFORMASI STOK (MASUK VS KELUAR) ===
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  // Box Total Masuk
                   Expanded(
                     child: _buildSummaryCard(
                       title: "TOTAL MASUK",
@@ -150,7 +153,6 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Box Total Keluar
                   Expanded(
                     child: _buildSummaryCard(
                       title: "TOTAL KELUAR",
@@ -162,7 +164,6 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
                 ],
               ),
             ),
-
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _fetchData,
@@ -187,7 +188,6 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
     );
   }
 
-  // Widget Helper untuk kotak ringkasan
   Widget _buildSummaryCard({
     required String title,
     required String value,
@@ -267,7 +267,10 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
     );
   }
 
+  // --- WIDGET CARD DIPERBARUI LABELNYA ---
   Widget _buildBarangCard(BarangModel barang) {
+    bool isMasuk = barang.status.toUpperCase() == 'MASUK';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -279,48 +282,102 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
                 blurRadius: 8,
                 offset: const Offset(0, 4))
           ]),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        leading: Container(
-          width: 55,
-          height: 55,
-          decoration: BoxDecoration(
-              color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
-          child: _buildImageWidget(barang.foto),
-        ),
-        title: Text(barang.namaBarang,
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("${barang.kodeBarang} • Stok: ${barang.stok}",
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
-            const SizedBox(height: 6),
-            _buildBadge(barang.status),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.grey),
-          onSelected: (val) =>
-              val == 'edit' ? _handleEdit(barang) : _showDeleteConfirmation(barang),
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-                value: 'edit',
-                child: Row(children: [
-                  Icon(Icons.edit_outlined, color: Colors.blue, size: 20),
-                  SizedBox(width: 10),
-                  Text("Edit")
-                ])),
-            const PopupMenuItem(
-                value: 'delete',
-                child: Row(children: [
-                  Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                  SizedBox(width: 10),
-                  Text("Hapus")
-                ])),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                  color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
+              child: _buildImageWidget(barang.foto),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(barang.namaBarang,
+                            style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold, fontSize: 14)),
+                      ),
+                      _buildMenuButton(barang),
+                    ],
+                  ),
+                  _buildBadge(barang.status),
+                  const SizedBox(height: 8),
+                  
+                  // INFORMASI LENGKAP
+                  _buildDetailRow(Icons.qr_code, "Kode: ${barang.kodeBarang}"),
+                  _buildDetailRow(Icons.layers, "Stok: ${barang.stok} ${barang.satuan}"),
+                  _buildDetailRow(Icons.category, "Kategori: ${barang.kategori}"),
+                  
+                  // Label Tanggal Dinamis (Masuk/Keluar)
+                  if (barang.tglKadaluarsa != null)
+                    _buildDetailRow(Icons.calendar_today, 
+                        "${isMasuk ? 'Tgl Masuk' : 'Tgl Keluar'}: ${DateFormat('dd MMM yyyy').format(barang.tglKadaluarsa!)}"),
+                  
+                  if (barang.deskripsi != null && barang.deskripsi!.isNotEmpty)
+                    _buildDetailRow(Icons.notes, "Ket: ${barang.deskripsi}", isMultiLine: true),
+                ],
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String text, {bool isMultiLine = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 14, color: Colors.grey[500]),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700]),
+              maxLines: isMultiLine ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuButton(BarangModel barang) {
+    return PopupMenuButton<String>(
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
+      icon: const Icon(Icons.more_vert, color: Colors.grey, size: 20),
+      onSelected: (val) =>
+          val == 'edit' ? _handleEdit(barang) : _showDeleteConfirmation(barang),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+            value: 'edit',
+            child: Row(children: [
+              Icon(Icons.edit_outlined, color: Colors.blue, size: 20),
+              SizedBox(width: 10),
+              Text("Edit")
+            ])),
+        const PopupMenuItem(
+            value: 'delete',
+            child: Row(children: [
+              Icon(Icons.delete_outline, color: Colors.red, size: 20),
+              SizedBox(width: 10),
+              Text("Hapus")
+            ])),
+      ],
     );
   }
 
@@ -351,7 +408,7 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
   Widget _buildBadge(String status) {
     bool isMasuk = status.toUpperCase() == 'MASUK';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
           color: isMasuk ? Colors.green[50] : Colors.orange[50],
           borderRadius: BorderRadius.circular(20),

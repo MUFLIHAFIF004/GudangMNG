@@ -7,8 +7,8 @@ class BarangService {
   final Dio dio = Dio(
     BaseOptions(
       baseUrl: 'https://gdmnbeckend-production.up.railway.app',
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 60),
       headers: {'Content-Type': 'application/json'},
     ),
   );
@@ -39,11 +39,13 @@ class BarangService {
     required String status,
     String? deskripsi,
     String? foto,
-    String? tglKadaluarsa,
+    // UBAH JADI REQUIRED (WAJIB DIISI)
+    required String tglKadaluarsa,
   }) async {
     try {
-      String? finalDate = tglKadaluarsa;
-      if (finalDate != null && finalDate.contains('T')) {
+      // Format tanggal (hapus 'T' jika ada)
+      String finalDate = tglKadaluarsa;
+      if (finalDate.contains('T')) {
         finalDate = finalDate.replaceAll('T', ' ').split('.')[0];
       }
 
@@ -58,7 +60,7 @@ class BarangService {
           "status": status,
           "deskripsi": deskripsi,
           "foto": foto,
-          "tgl_kadaluarsa": finalDate,
+          "tgl_kadaluarsa": finalDate, // Dikirim sebagai tanggal masuk
         },
       );
       return response.statusCode == 200;
@@ -78,11 +80,12 @@ class BarangService {
     required int stok,
     String? deskripsi,
     String? foto,
-    String? tglKadaluarsa,
+    // UBAH JADI REQUIRED (WAJIB DIISI)
+    required String tglKadaluarsa,
   }) async {
     try {
-      String? finalDate = tglKadaluarsa;
-      if (finalDate != null && finalDate.contains('T')) {
+      String finalDate = tglKadaluarsa;
+      if (finalDate.contains('T')) {
         finalDate = finalDate.replaceAll('T', ' ').split('.')[0];
       }
 
@@ -121,13 +124,22 @@ class BarangService {
     }
   }
 
+  // --- BAGIAN INI YANG PALING PENTING UNTUK RIWAYAT KELUAR ---
   Future<bool> updateStok({
     required int id,
     required int jumlah,
     required String tipe,
     required String keterangan,
+    // TAMBAHKAN PARAMETER TANGGAL (Opsional tapi dikirim jika ada)
+    String? tanggal,
   }) async {
     try {
+      // Format tanggal jika ada
+      String? finalDate = tanggal;
+      if (finalDate != null && finalDate.contains('T')) {
+        finalDate = finalDate.replaceAll('T', ' ').split('.')[0];
+      }
+
       final response = await dio.post(
         '/stok/update',
         data: {
@@ -135,6 +147,8 @@ class BarangService {
           "jumlah": jumlah,
           "tipe": tipe,
           "keterangan": keterangan,
+          // Kirim tanggal custom ke backend agar riwayat sesuai inputan
+          "tanggal": finalDate,
         },
       );
       return response.statusCode == 200;
@@ -166,7 +180,6 @@ class BarangService {
 
   Future<bool> deleteRiwayat(int id) async {
     try {
-      // Sesuai dengan controller Go Anda yang menerima query parameter ?id=
       final response = await dio.delete(
         '/riwayat/delete',
         queryParameters: {'id': id},
