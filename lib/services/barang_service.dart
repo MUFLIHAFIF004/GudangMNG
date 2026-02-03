@@ -130,11 +130,10 @@ class BarangService {
     required int jumlah,
     required String tipe,
     required String keterangan,
-    // TAMBAHKAN PARAMETER TANGGAL (Opsional tapi dikirim jika ada)
     String? tanggal,
   }) async {
     try {
-      // Format tanggal jika ada
+      
       String? finalDate = tanggal;
       if (finalDate != null && finalDate.contains('T')) {
         finalDate = finalDate.replaceAll('T', ' ').split('.')[0];
@@ -147,8 +146,7 @@ class BarangService {
           "jumlah": jumlah,
           "tipe": tipe,
           "keterangan": keterangan,
-          // Kirim tanggal custom ke backend agar riwayat sesuai inputan
-          "tanggal": finalDate,
+          "tanggal": tanggal,
         },
       );
       return response.statusCode == 200;

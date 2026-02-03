@@ -5,6 +5,7 @@ class RiwayatModel {
   final String tipe;
   final int jumlah;
   final String keterangan;
+  final String? tanggal;
   final DateTime createdAt;
 
   RiwayatModel({
@@ -14,6 +15,7 @@ class RiwayatModel {
     required this.tipe,
     required this.jumlah,
     required this.keterangan,
+    this.tanggal,
     required this.createdAt,
   });
 
@@ -25,6 +27,7 @@ class RiwayatModel {
     tipe: json['tipe'] ?? '',
     jumlah: json['jumlah'] ?? 0,
     keterangan: json['keterangan'] ?? '',
+    tanggal: json['tanggal'],
     createdAt: json['created_at'] != null 
         ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
         : DateTime.now(),

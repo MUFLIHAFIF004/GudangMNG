@@ -8,7 +8,7 @@ class BarangModel {
   final String status; 
   final String? deskripsi;
   final String? foto;
-  final DateTime? tglKadaluarsa;
+  final String? tglKadaluarsa;
 
   BarangModel({
     required this.id,
@@ -34,9 +34,7 @@ class BarangModel {
       status: json['status'] ?? 'MASUK', 
       deskripsi: json['deskripsi'],
       foto: json['foto'],
-      tglKadaluarsa: (json['tgl_kadaluarsa'] != null && json['tgl_kadaluarsa'].toString().isNotEmpty)
-          ? DateTime.tryParse(json['tgl_kadaluarsa'].toString()) 
-          : null,
+      tglKadaluarsa: json['tgl_kadaluarsa'],
     );
   }
 
@@ -51,7 +49,7 @@ class BarangModel {
       "status": status,
       "deskripsi": deskripsi,
       "foto": foto,
-      "tgl_kadaluarsa": tglKadaluarsa?.toIso8601String(),
+      "tgl_kadaluarsa": tglKadaluarsa,
     };
   }
 }
