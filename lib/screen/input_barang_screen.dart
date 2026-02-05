@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tb_gudangmng/services/barang_service.dart';
 import 'package:tb_gudangmng/model/barang_model.dart';
-import 'package:tb_gudangmng/model/riwayat_model.dart'; 
+import 'package:tb_gudangmng/model/riwayat_model.dart';
 
 class InputBarangScreen extends StatefulWidget {
   final bool isMasuk;
@@ -32,21 +32,27 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
   String? _selectedSKU;
   String? _selectedSatuan;
   String? _selectedKategori;
-  
-  DateTime? _selectedTransDate; 
-  DateTime? _selectedExpDate;   
-  
+
+  DateTime? _selectedTransDate;
+  DateTime? _selectedExpDate;
+
   File? _imageFile;
   String? _base64Image;
 
   final List<String> _listSatuan = ['Pcs', 'Box', 'Karton', 'Pack', 'Unit'];
-  final List<String> _listKategori = ['Makanan', 'Minuman', 'Elektronik', 'Alat Tulis', 'Lainnya'];
+  final List<String> _listKategori = [
+    'Makanan',
+    'Minuman',
+    'Elektronik',
+    'Alat Tulis',
+    'Lainnya',
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadAllBarang();
-    
+
     if (widget.barang != null) {
       _namaController.text = widget.barang!.namaBarang;
       _kodeController.text = widget.barang!.kodeBarang;
@@ -56,7 +62,7 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
       _selectedKategori = widget.barang!.kategori;
       _base64Image = widget.barang!.foto;
       _selectedSKU = widget.barang!.kodeBarang;
-      
+
       if (widget.barang!.tglKadaluarsa != null) {
         _selectedExpDate = DateTime.tryParse(widget.barang!.tglKadaluarsa!);
       }
@@ -74,7 +80,10 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 50,
+    );
     if (pickedFile != null) {
       File file = File(pickedFile.path);
       List<int> imageBytes = await file.readAsBytes();
@@ -89,16 +98,18 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
   Future<void> _selectDate(BuildContext context, bool isExpired) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: isExpired 
+      initialDate: isExpired
           ? (_selectedExpDate ?? DateTime.now().add(const Duration(days: 365)))
           : (_selectedTransDate ?? DateTime.now()),
-      firstDate: DateTime(2000), 
+      firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
     if (picked != null) {
       setState(() {
-        if (isExpired) _selectedExpDate = picked;
-        else _selectedTransDate = picked;
+        if (isExpired)
+          _selectedExpDate = picked;
+        else
+          _selectedTransDate = picked;
       });
     }
   }
@@ -106,15 +117,22 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
   Future<void> _handleSave() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedTransDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tanggal transaksi wajib dipilih!'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tanggal transaksi wajib dipilih!'),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
 
       setState(() => _isLoading = true);
-      
-      String transDateStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedTransDate!);
-      String expDateStr = _selectedExpDate != null 
-          ? DateFormat('yyyy-MM-dd HH:info MM:ss').format(_selectedExpDate!) 
+
+      String transDateStr = DateFormat(
+        'yyyy-MM-dd HH:mm:ss',
+      ).format(_selectedTransDate!);
+      String expDateStr = _selectedExpDate != null
+          ? DateFormat('yyyy-MM-dd HH:info MM:ss').format(_selectedExpDate!)
           : transDateStr;
 
       final riwayatEntry = RiwayatModel(
@@ -124,7 +142,7 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
         tipe: widget.isMasuk ? "MASUK" : "KELUAR",
         jumlah: int.parse(_jumlahController.text),
         keterangan: _ketController.text,
-        tanggal: transDateStr, 
+        tanggal: transDateStr,
         createdAt: DateTime.now(),
       );
 
@@ -140,54 +158,82 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
           status: widget.barang!.status,
           deskripsi: _ketController.text,
           foto: _base64Image,
+          tglCatatan: transDateStr,
           tglKadaluarsa: expDateStr,
         );
       } else if (widget.isMasuk) {
         success = await _barangService.createBarang(
           kodeBarang: _kodeController.text,
-          namaBarang: riwayatEntry.namaBarang,
+          namaBarang: _namaController.text,
           kategori: _selectedKategori ?? 'Lainnya',
           satuan: _selectedSatuan ?? 'Pcs',
-          stok: riwayatEntry.jumlah,
-          status: riwayatEntry.tipe,
-          deskripsi: riwayatEntry.keterangan,
+          stok: int.parse(_jumlahController.text),
+          status: "MASUK",
+          deskripsi: _ketController.text,
           foto: _base64Image,
-          tglKadaluarsa: riwayatEntry.tanggal!, 
+          tglCatatan: transDateStr,
+          tglKadaluarsa: expDateStr,
         );
       } else {
         try {
-          final selectedItem = _allBarangs.firstWhere((b) => b.kodeBarang == _selectedSKU);
+          final selectedItem = _allBarangs.firstWhere(
+            (b) => b.kodeBarang == _selectedSKU,
+          );
           success = await _barangService.updateStok(
             id: selectedItem.id,
             jumlah: riwayatEntry.jumlah,
             tipe: riwayatEntry.tipe,
             keterangan: riwayatEntry.keterangan,
-            tanggal: riwayatEntry.tanggal, 
+            tanggal: transDateStr,
           );
-        } catch (e) { success = false; }
+        } catch (e) {
+          success = false;
+        }
       }
 
       if (!mounted) return;
       setState(() => _isLoading = false);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.barang != null ? 'Data Berhasil Diperbarui' : 'Data Berhasil Disimpan'), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating),
+          SnackBar(
+            content: Text(
+              widget.barang != null
+                  ? 'Data Berhasil Diperbarui'
+                  : 'Data Berhasil Disimpan',
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal menyimpan data'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal menyimpan data'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    String title = widget.barang != null ? 'Edit Barang' : (widget.isMasuk ? 'Input Barang Masuk' : 'Input Barang Keluar');
+    String title = widget.barang != null
+        ? 'Edit Barang'
+        : (widget.isMasuk ? 'Input Barang Masuk' : 'Input Barang Keluar');
     Color themeColor = widget.isMasuk ? Colors.red[800]! : Colors.orange[800]!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title, style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(
+          title,
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: themeColor,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -200,24 +246,39 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInput(label: 'Nama Barang', controller: _namaController, icon: Icons.inventory, enabled: widget.isMasuk),
+                    _buildInput(
+                      label: 'Nama Barang',
+                      controller: _namaController,
+                      icon: Icons.inventory,
+                      enabled: widget.isMasuk,
+                    ),
                     const SizedBox(height: 16),
                     widget.isMasuk
-                        ? _buildInput(label: 'Kode Barang (SKU)', controller: _kodeController, icon: Icons.qr_code)
+                        ? _buildInput(
+                            label: 'Kode Barang (SKU)',
+                            controller: _kodeController,
+                            icon: Icons.qr_code,
+                          )
                         : _buildDropdown(
                             'Pilih Kode Barang (SKU)',
-                            _allBarangs.where((b) => b.status.toUpperCase() == 'MASUK').map((e) => e.kodeBarang).toList(),
+                            _allBarangs
+                                .where((b) => b.status.toUpperCase() == 'MASUK')
+                                .map((e) => e.kodeBarang)
+                                .toList(),
                             _selectedSKU,
                             (v) {
                               if (v != null) {
-                                final selected = _allBarangs.firstWhere((e) => e.kodeBarang == v);
+                                final selected = _allBarangs.firstWhere(
+                                  (e) => e.kodeBarang == v,
+                                );
                                 setState(() {
                                   _selectedSKU = v;
                                   _namaController.text = selected.namaBarang;
                                   _kodeController.text = v;
                                   // Memasukkan stok langsung ke dalam field jumlah
-                                  _jumlahController.text = selected.stok.toString();
-                                  _selectedSatuan = selected.satuan; 
+                                  _jumlahController.text = selected.stok
+                                      .toString();
+                                  _selectedSatuan = selected.satuan;
                                   _selectedKategori = selected.kategori;
                                   _base64Image = selected.foto;
                                 });
@@ -227,26 +288,73 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _buildInput(label: 'Jumlah', controller: _jumlahController, icon: Icons.numbers, isNumber: true)),
+                        Expanded(
+                          child: _buildInput(
+                            label: 'Jumlah',
+                            controller: _jumlahController,
+                            icon: Icons.numbers,
+                            isNumber: true,
+                          ),
+                        ),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildDropdown('Satuan', _listSatuan, _selectedSatuan, (v) => setState(() => _selectedSatuan = v))),
+                        Expanded(
+                          child: _buildDropdown(
+                            'Satuan',
+                            _listSatuan,
+                            _selectedSatuan,
+                            (v) => setState(() => _selectedSatuan = v),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _buildDropdown('Kategori', _listKategori, _selectedKategori, (v) => setState(() => _selectedKategori = v)),
+                    _buildDropdown(
+                      'Kategori',
+                      _listKategori,
+                      _selectedKategori,
+                      (v) => setState(() => _selectedKategori = v),
+                    ),
                     const SizedBox(height: 16),
-                    _buildDatePicker(context: context, label: widget.isMasuk ? 'Tanggal Masuk' : 'Tanggal Keluar', selectedDate: _selectedTransDate, onTap: () => _selectDate(context, false)),
+                    _buildDatePicker(
+                      context: context,
+                      label: widget.isMasuk
+                          ? 'Tanggal Masuk'
+                          : 'Tanggal Keluar',
+                      selectedDate: _selectedTransDate,
+                      onTap: () => _selectDate(context, false),
+                    ),
                     const SizedBox(height: 16),
                     if (widget.isMasuk) ...[
-                      _buildDatePicker(context: context, label: 'Tanggal Kadaluarsa (Expired)', selectedDate: _selectedExpDate, onTap: () => _selectDate(context, true)),
+                      _buildDatePicker(
+                        context: context,
+                        label: 'Tanggal Kadaluarsa (Expired)',
+                        selectedDate: _selectedExpDate,
+                        onTap: () => _selectDate(context, true),
+                      ),
                       const SizedBox(height: 16),
                     ],
-                    _buildInput(label: 'Keterangan', controller: _ketController, icon: Icons.note, maxLines: 3),
+                    _buildInput(
+                      label: 'Keterangan',
+                      controller: _ketController,
+                      icon: Icons.note,
+                      maxLines: 3,
+                    ),
                     const SizedBox(height: 20),
-                    Text("Foto Barang", style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[700])),
-                    const SizedBox(height: 8),
-                    _buildImagePicker(),
-                    const SizedBox(height: 40),
+                    if (widget.barang != null || widget.isMasuk) ...[
+                      Text(
+                        "Foto Barang",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildImagePicker(),
+                      const SizedBox(height: 40),
+                    ] else ...[
+                      const SizedBox(height: 20),
+                    ],
                     _buildSubmitButton('SIMPAN DATA', themeColor),
                   ],
                 ),
@@ -255,7 +363,14 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
     );
   }
 
-  Widget _buildInput({required String label, required TextEditingController controller, required IconData icon, bool isNumber = false, int maxLines = 1, bool enabled = true}) {
+  Widget _buildInput({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    bool isNumber = false,
+    int maxLines = 1,
+    bool enabled = true,
+  }) {
     return TextFormField(
       controller: controller,
       enabled: enabled,
@@ -272,47 +387,110 @@ class _InputBarangScreenState extends State<InputBarangScreen> {
     );
   }
 
-  Widget _buildDropdown(String label, List<String> items, String? currentValue, Function(String?) onChanged) {
+  Widget _buildDropdown(
+    String label,
+    List<String> items,
+    String? currentValue,
+    Function(String?) onChanged,
+  ) {
     return DropdownButtonFormField<String>(
       isExpanded: true,
-      value: (currentValue != null && items.contains(currentValue)) ? currentValue : null,
+      value: (currentValue != null && items.contains(currentValue))
+          ? currentValue
+          : null,
       decoration: InputDecoration(
-        labelText: label, 
-        prefixIcon: const Icon(Icons.category, color: Colors.red), 
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))
+        labelText: label,
+        prefixIcon: const Icon(Icons.category, color: Colors.red),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      items: items
+          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+          .toList(),
       onChanged: onChanged,
       validator: (v) => v == null ? 'Wajib' : null,
     );
   }
 
-  Widget _buildDatePicker({required BuildContext context, required String label, required DateTime? selectedDate, required VoidCallback onTap}) {
+  Widget _buildDatePicker({
+    required BuildContext context,
+    required String label,
+    required DateTime? selectedDate,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: InputDecorator(
-        decoration: InputDecoration(labelText: label, prefixIcon: const Icon(Icons.calendar_today, color: Colors.red), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-        child: Text(selectedDate == null ? 'Pilih Tanggal...' : DateFormat('dd MMM yyyy').format(selectedDate), style: GoogleFonts.poppins(fontSize: 15, color: selectedDate == null ? Colors.grey[600] : Colors.black)),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.calendar_today, color: Colors.red),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text(
+          selectedDate == null
+              ? 'Pilih Tanggal...'
+              : DateFormat('dd MMM yyyy').format(selectedDate),
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            color: selectedDate == null ? Colors.grey[600] : Colors.black,
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildImagePicker() {
     return GestureDetector(
-      onTap: widget.isMasuk ? _pickImage : null, 
+      onTap: widget.isMasuk ? _pickImage : null,
       child: Container(
-        height: 150, width: double.infinity,
-        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[300]!)),
-        child: _imageFile != null 
-            ? ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(_imageFile!, fit: BoxFit.cover)) 
-            : (_base64Image != null && _base64Image!.isNotEmpty) 
-                ? ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.memory(base64Decode(_base64Image!), fit: BoxFit.cover)) 
-                : const Icon(Icons.camera_alt_outlined, color: Colors.red, size: 40),
+        height: 150,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: _imageFile != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(_imageFile!, fit: BoxFit.cover),
+              )
+            : (_base64Image != null && _base64Image!.isNotEmpty)
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.memory(
+                  base64Decode(_base64Image!),
+                  fit: BoxFit.cover,
+                ),
+              )
+            : const Icon(
+                Icons.camera_alt_outlined,
+                color: Colors.red,
+                size: 40,
+              ),
       ),
     );
   }
 
   Widget _buildSubmitButton(String title, Color color) {
-    return SizedBox(width: double.infinity, height: 54, child: ElevatedButton(onPressed: _isLoading ? null : _handleSave, style: ElevatedButton.styleFrom(backgroundColor: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))));
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _handleSave,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 }

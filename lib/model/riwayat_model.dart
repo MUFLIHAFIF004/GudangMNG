@@ -20,17 +20,29 @@ class RiwayatModel {
   });
 
   factory RiwayatModel.fromJson(Map<String, dynamic> json) {
-  return RiwayatModel(
-    id: json['id'] ?? 0,
-    barangId: json['barang_id'] ?? 0, // Sesuai kolom DB
-    namaBarang: json['nama_barang'] ?? '',
-    tipe: json['tipe'] ?? '',
-    jumlah: json['jumlah'] ?? 0,
-    keterangan: json['keterangan'] ?? '',
-    tanggal: json['tanggal'],
-    createdAt: json['created_at'] != null 
-        ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
-        : DateTime.now(),
-  );
-}
+    return RiwayatModel(
+      id: json['id'] ?? 0,
+      barangId: json['barang_id'] ?? 0, // Sesuai kolom DB
+      namaBarang: json['nama_barang'] ?? '',
+      tipe: json['tipe'] ?? '',
+      jumlah: json['jumlah'] ?? 0,
+      keterangan: json['keterangan'] ?? '',
+      tanggal: json['tanggal'],
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "barang_id": barangId,
+      "nama_barang": namaBarang,
+      "tipe": tipe,
+      "jumlah": jumlah,
+      "keterangan": keterangan,
+      "tanggal": tanggal,
+      "created_at": createdAt.toIso8601String(),
+    };
+  }
 }

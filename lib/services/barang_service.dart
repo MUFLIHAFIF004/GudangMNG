@@ -39,14 +39,19 @@ class BarangService {
     required String status,
     String? deskripsi,
     String? foto,
-    // UBAH JADI REQUIRED (WAJIB DIISI)
+    required String tglCatatan,
     required String tglKadaluarsa,
   }) async {
     try {
-      // Format tanggal (hapus 'T' jika ada)
-      String finalDate = tglKadaluarsa;
-      if (finalDate.contains('T')) {
-        finalDate = finalDate.replaceAll('T', ' ').split('.')[0];
+      // 1. Bersihkan format tanggal Kadaluarsa
+      String finalExpDate = tglKadaluarsa;
+      if (finalExpDate.contains('T')) {
+        finalExpDate = finalExpDate.replaceAll('T', ' ').split('.')[0];
+      }
+
+      String finalNoteDate = tglCatatan;
+      if (finalNoteDate.contains('T')) {
+        finalNoteDate = finalNoteDate.replaceAll('T', ' ').split('.')[0];
       }
 
       final response = await dio.post(
@@ -60,7 +65,8 @@ class BarangService {
           "status": status,
           "deskripsi": deskripsi,
           "foto": foto,
-          "tgl_kadaluarsa": finalDate, // Dikirim sebagai tanggal masuk
+          "tanggal": finalNoteDate, 
+          "tgl_kadaluarsa": finalExpDate, 
         },
       );
       return response.statusCode == 200;
@@ -80,13 +86,18 @@ class BarangService {
     required int stok,
     String? deskripsi,
     String? foto,
-    // UBAH JADI REQUIRED (WAJIB DIISI)
+    required String tglCatatan,
     required String tglKadaluarsa,
   }) async {
     try {
       String finalDate = tglKadaluarsa;
       if (finalDate.contains('T')) {
         finalDate = finalDate.replaceAll('T', ' ').split('.')[0];
+      }
+
+      String finalNoteDate = tglCatatan;
+      if (finalNoteDate.contains('T')) {
+        finalNoteDate = finalNoteDate.replaceAll('T', ' ').split('.')[0];
       }
 
       final response = await dio.put(
@@ -101,6 +112,7 @@ class BarangService {
           "status": status,
           "deskripsi": deskripsi,
           "foto": foto,
+          "tanggal": finalNoteDate,
           "tgl_kadaluarsa": finalDate,
         },
       );

@@ -111,14 +111,21 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
   Widget _buildBarangCard(BarangModel barang) {
     bool isMasuk = barang.status.toUpperCase() == 'MASUK';
     
-    // MENCARI TANGGAL MANUAL DARI RIWAYAT BERDASARKAN BARANG ID
-    String tglManual = "-";
+    String tglTransaksi = "-";
     try {
-      final riwayatTerkait = _allRiwayat.firstWhere((r) => r.barangId == barang.id);
-      tglManual = _cleanDate(riwayatTerkait.tanggal);
+      final riwayatBarangIni = _allRiwayat.where((r) => r.barangId == barang.id).toList();
+      if (riwayatBarangIni.isNotEmpty) {
+        final riwayatTerakhir = riwayatBarangIni.lastWhere(
+          (r) => r.tipe.toUpperCase() == (isMasuk ? 'MASUK' : 'KELUAR'),
+          orElse: () => riwayatBarangIni.last,
+        );
+        tglTransaksi = _cleanDate(riwayatTerakhir.tanggal);
+      }
     } catch (e) {
-      tglManual = _cleanDate(barang.tglKadaluarsa); // Fallback jika riwayat tidak ditemukan
+      tglTransaksi = "-"; // Fallback jika riwayat tidak ditemukan
     }
+
+    String tglExpired = _cleanDate(barang.tglKadaluarsa);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -149,14 +156,16 @@ class _ListBarangScreenState extends State<ListBarangScreen> {
                   _buildDetailRow(Icons.qr_code, "Kode: ${barang.kodeBarang}"),
                   _buildDetailRow(Icons.layers, "Stok: ${barang.stok} ${barang.satuan}"),
                   
-                  // MENAMPILKAN TANGGAL TRANSAKSI MANUAL (DARI RIWAYATMODEL)
                   _buildDetailRow(Icons.calendar_today, 
-                      "${isMasuk ? 'Tgl Masuk' : 'Tgl Keluar'}: $tglManual"),
+                      "${isMasuk ? 'Tgl Masuk' : 'Tgl Keluar'}: $tglTransaksi"),
                   
                   // MENAMPILKAN TANGGAL KADALUARSA (DARI BARANGMODEL)
-                  if (isMasuk && barang.tglKadaluarsa != null)
-                    _buildDetailRow(Icons.timer_outlined, 
-                        "Expired: ${_cleanDate(barang.tglKadaluarsa)}", iconColor: Colors.orange[800]),
+                  if (isMasuk && barang.tglKadaluarsa != null && barang.tglKadaluarsa != "")
+                    _buildDetailRow(
+                      Icons.timer_outlined, 
+                      "Expired: $tglExpired", 
+                      iconColor: Colors.orange[800]
+                    ),
                 ],
               ),
             ),
